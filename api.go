@@ -1,37 +1,38 @@
 package api
 
 import (
-  "log"
-  "net/http"
+	"log"
+	"net/http"
 
-  "github.com/mmpg/api/client"
-  "github.com/mmpg/api/hub"
+	"github.com/mmpg/api/client"
+	"github.com/mmpg/api/hub"
 )
 
 func serveEvents(w http.ResponseWriter, r *http.Request) {
-  if r.Method != "GET" {
-    http.Error(w, "Method not allowed", 405)
-    return
-  }
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
 
-  c, err := client.Upgrade(w, r)
+	c, err := client.Upgrade(w, r)
 
-  if err != nil {
-    log.Println(err)
-    return
-  }
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
-  hub.Register(c)
+	hub.Register(c)
 
-  defer func() {
-    hub.Unregister(c)
-  }()
+	defer func() {
+		hub.Unregister(c)
+	}()
 
-  c.Listen()
+	c.Listen()
 }
 
 func Run() {
-  go hub.Run()
+	go hub.Run()
 
-  http.HandleFunc("/events", serveEvents)
+	http.HandleFunc("/events", serveEvents)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

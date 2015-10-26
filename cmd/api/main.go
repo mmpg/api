@@ -1,9 +1,9 @@
 package main
 
 import (
-  "github.com/mmpg/api"
+	"github.com/mmpg/api"
 )
 
 func main() {
-  api.run()
+	api.Run()
 }
