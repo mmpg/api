@@ -48,6 +48,10 @@ func Unregister(c *client.Client) {
 	h.unregister <- c
 }
 
+func Broadcast(m string) {
+	h.broadcast <- m
+}
+
 func remove(c *client.Client) {
 	c.Close()
 	delete(h.clients, c)

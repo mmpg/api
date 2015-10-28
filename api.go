@@ -6,7 +6,20 @@ import (
 
 	"github.com/mmpg/api/client"
 	"github.com/mmpg/api/hub"
+	"github.com/mmpg/api/notifier"
 )
+
+// Run the MMPG Api:
+// 1. Starts the subscriber hub
+// 2. Starts the event notifier
+// 3. Starts the API server
+func Run() {
+	go hub.Run()
+	go notifier.Run()
+
+	http.HandleFunc("/events", serveEvents)
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
 
 func serveEvents(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
@@ -28,11 +41,4 @@ func serveEvents(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	c.Listen()
-}
-
-func Run() {
-	go hub.Run()
-
-	http.HandleFunc("/events", serveEvents)
-	log.Fatal(http.ListenAndServe(":8080", nil))
 }
