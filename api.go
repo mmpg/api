@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/mmpg/api/client"
+	"github.com/mmpg/api/engine"
 	"github.com/mmpg/api/hub"
 	"github.com/mmpg/api/notifier"
 )
@@ -18,6 +19,7 @@ func Run() {
 	go notifier.Run()
 
 	http.HandleFunc("/events", serveEvents)
+	http.HandleFunc("/test", serveTest)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -41,4 +43,15 @@ func serveEvents(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	c.Listen()
+}
+
+func serveTest(w http.ResponseWriter, r *http.Request) {
+	reply, err := engine.Test()
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	w.Write([]byte(reply))
 }
