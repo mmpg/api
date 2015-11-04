@@ -8,21 +8,21 @@ var (
 
 type handler func(string)
 
-func newSocket(t zmq4.Type, uri string) (sck *zmq4.Socket, err error) {
+func newSocket(t zmq4.Type, port int) (sck *zmq4.Socket, err error) {
 	sck, err = zmq4.NewSocket(t)
 
 	if err != nil {
 		return
 	}
 
-	err = sck.Connect(uri)
+	err = sck.Connect("tcp://" + host + ":" + string(port))
 
 	return
 }
 
 // Subscribe to the engine and pass new events to the given handler
 func Subscribe(fn handler) error {
-	sck, err := newSocket(zmq4.SUB, "tcp://"+host+":5556")
+	sck, err := newSocket(zmq4.SUB, 5556)
 	defer sck.Close()
 
 	if err != nil {
@@ -44,7 +44,7 @@ func Subscribe(fn handler) error {
 
 // Test engine connectivity
 func Test() (s string, err error) {
-	sck, err := newSocket(zmq4.REQ, "tcp://"+host+":5555")
+	sck, err := newSocket(zmq4.REQ, 5555)
 	defer sck.Close()
 
 	if err != nil {
