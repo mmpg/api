@@ -1,26 +1,53 @@
 package engine
 
-import (
-	"log"
-
-	"github.com/pebbe/zmq4"
-)
+import "github.com/pebbe/zmq4"
 
 var (
-	uri = "tcp://127.0.0.1:5555"
+	host = "127.0.0.1"
 )
 
-// Test engine connectivity
-func Test() (s string, err error) {
-	sck, err := zmq4.NewSocket(zmq4.REQ)
-	defer sck.Close()
+type handler func(string)
+
+func newSocket(t zmq4.Type, uri string) (sck *zmq4.Socket, err error) {
+	sck, err = zmq4.NewSocket(t)
 
 	if err != nil {
-		log.Println("1")
 		return
 	}
 
-	if err = sck.Connect(uri); err != nil {
+	err = sck.Connect(uri)
+
+	return
+}
+
+// Subscribe to the engine and pass new events to the given handler
+func Subscribe(fn handler) error {
+	sck, err := newSocket(zmq4.SUB, "tcp://"+host+":5556")
+	defer sck.Close()
+
+	if err != nil {
+		return err
+	}
+
+	sck.SetSubscribe("")
+
+	for {
+		s, err := sck.Recv(0)
+
+		if err != nil {
+			return err
+		}
+
+		fn(s)
+	}
+}
+
+// Test engine connectivity
+func Test() (s string, err error) {
+	sck, err := newSocket(zmq4.REQ, "tcp://"+host+":5555")
+	defer sck.Close()
+
+	if err != nil {
 		return
 	}
 
