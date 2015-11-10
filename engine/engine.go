@@ -1,6 +1,10 @@
 package engine
 
-import "github.com/pebbe/zmq4"
+import (
+	"strconv"
+
+	"github.com/pebbe/zmq4"
+)
 
 var (
 	host = "127.0.0.1"
@@ -15,7 +19,7 @@ func newSocket(t zmq4.Type, port int) (sck *zmq4.Socket, err error) {
 		return
 	}
 
-	err = sck.Connect("tcp://" + host + ":" + string(port))
+	err = sck.Connect("tcp://" + host + ":" + strconv.Itoa(port))
 
 	return
 }
