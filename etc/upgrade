@@ -18,11 +18,11 @@ stop_api () {
 
 # Fetch origin repository
 echo 'Fetching changes...'
-#git fetch --all
+git fetch --all
 
 # Force checkout to branch
 echo 'Applying changes...'
-#git checkout --force origin/master
+git checkout --force origin/master
 
 # Wait for the current api to shut down
 echo 'Shutting down the current API...'
