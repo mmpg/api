@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+# Sends a signal to a process
+sig () {
+  test -s "$1" && kill -$2 `cat $1` > /dev/null 2>&1
+}
+
+pid=build/api.pid
+
+# Useful aliases
+api_running () {
+  sig ${pid} 0
+}
+
+stop_api () {
+  sig ${pid} TERM
+}
+
+# Fetch origin repository
+echo 'Fetching changes...'
+#git fetch --all
+
+# Force checkout to branch
+echo 'Applying changes...'
+#git checkout --force origin/master
+
+# Wait for the current api to shut down
+echo 'Shutting down the current API...'
+stop_api
+
+n=10
+while api_running && test ${n} -ge 0
+do
+  printf >&2 '.'
+  sleep 1
+  n=$(( $n - 1 ))
+done
+
+test ${n} -lt 10 && echo >&2 ''
+
+api_running && echo 'ERROR: Engine has not stopped.' && exit 1
+echo 'API stopped successfully.'
+
+# Install new api
+echo 'Compiling new API...'
+mkdir -p build
+go build -o build/api cmd/api/main.go
+
+# Execute new api
+echo 'Executing new API...'
+nohup ./build/api >> build/api.out & echo $! > build/api.pid
