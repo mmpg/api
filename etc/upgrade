@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 # Sends a signal to a process
 sig () {
   test -s "$1" && kill -$2 `cat $1` > /dev/null 2>&1
@@ -42,6 +40,9 @@ test ${n} -lt 10 && echo >&2 ''
 
 api_running && echo 'ERROR: API has not stopped.' && exit 1
 echo 'API stopped successfully.'
+
+# Exit on error
+set -e
 
 # Install new api
 echo 'Compiling new API...'
