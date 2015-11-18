@@ -44,6 +44,7 @@ echo 'API stopped successfully.'
 # Install new api
 echo 'Compiling new API...'
 mkdir -p build
+go get ./...
 go build -o build/api cmd/api/main.go
 
 # Execute new api
