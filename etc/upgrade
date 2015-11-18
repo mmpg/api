@@ -52,5 +52,5 @@ go build -o build/api cmd/api/main.go
 
 # Execute new api
 echo 'Executing new API...'
-nohup ./build/api >> build/api.out &
+nohup ./build/api >> build/api.out 2>&1 &
 echo $! > build/api.pid
