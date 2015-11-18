@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 # Sends a signal to a process
 sig () {
   test -s "$1" && kill -$2 `cat $1` > /dev/null 2>&1
@@ -38,7 +40,7 @@ done
 
 test ${n} -lt 10 && echo >&2 ''
 
-api_running && echo 'ERROR: Engine has not stopped.' && exit 1
+api_running && echo 'ERROR: API has not stopped.' && exit 1
 echo 'API stopped successfully.'
 
 # Install new api
@@ -49,4 +51,5 @@ go build -o build/api cmd/api/main.go
 
 # Execute new api
 echo 'Executing new API...'
-nohup ./build/api >> build/api.out & echo $! > build/api.pid
+nohup ./build/api >> build/api.out &
+echo $! > build/api.pid
