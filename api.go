@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -65,8 +66,25 @@ func serveTest(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(reply))
 }
 
+type authMessage struct {
+	Email    string `json:email`
+	Password string `json:password`
+}
+
 func authHandler(uv userValidator) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		decoder := json.NewDecoder(r.Body)
+		var m authMessage
 
+		if err := decoder.Decode(&m); err != nil {
+			w.WriteHeader(403)
+			return
+		}
+
+		if uv(m.Email, m.Password) {
+			w.Write([]byte("{}"))
+		} else {
+			w.WriteHeader(403)
+		}
 	}
 }
