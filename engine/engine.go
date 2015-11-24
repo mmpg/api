@@ -1,7 +1,9 @@
 package engine
 
 import (
+	"errors"
 	"strconv"
+	"time"
 
 	"github.com/pebbe/zmq4"
 )
@@ -21,6 +23,38 @@ func newSocket(t zmq4.Type, port int) (sck *zmq4.Socket, err error) {
 
 	err = sck.Connect("tcp://" + host + ":" + strconv.Itoa(port))
 
+	return
+}
+
+func request(t string, m string) (r string, err error) {
+	sck, err := newSocket(zmq4.REQ, 5555)
+	defer sck.Close()
+
+	sck.SetLinger(0)
+
+	if err != nil {
+		return
+	}
+
+	if _, err = sck.Send(t+" "+m, 0); err != nil {
+		return
+	}
+
+	poller := zmq4.NewPoller()
+	poller.Add(sck, zmq4.POLLIN)
+
+	sockets, err := poller.Poll(2 * time.Second)
+
+	if err != nil {
+		return
+	}
+
+	if len(sockets) < 1 {
+		err = errors.New("Unable to connect with engine")
+		return
+	}
+
+	r, err = sck.Recv(0)
 	return
 }
 
@@ -46,20 +80,7 @@ func Subscribe(fn handler) error {
 	}
 }
 
-// Test engine connectivity
-func Test() (s string, err error) {
-	sck, err := newSocket(zmq4.REQ, 5555)
-	defer sck.Close()
-
-	if err != nil {
-		return
-	}
-
-	if _, err = sck.Send("Testing connectivity", 0); err != nil {
-		return
-	}
-
-	s, err = sck.Recv(0)
-
-	return
+// Log for the given time
+func Log(t string) (string, error) {
+	return request("LOG", t)
 }
