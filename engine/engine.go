@@ -12,6 +12,10 @@ var (
 	host = "127.0.0.1"
 )
 
+const (
+	requestTimeout = 2 * time.Second
+)
+
 type handler func(string)
 
 func newSocket(t zmq4.Type, port int) (sck *zmq4.Socket, err error) {
@@ -43,7 +47,7 @@ func request(t string, m string) (r string, err error) {
 	poller := zmq4.NewPoller()
 	poller.Add(sck, zmq4.POLLIN)
 
-	sockets, err := poller.Poll(2 * time.Second)
+	sockets, err := poller.Poll(requestTimeout)
 
 	if err != nil {
 		return
