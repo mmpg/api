@@ -3,6 +3,7 @@ package engine
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pebbe/zmq4"
@@ -30,35 +31,52 @@ func newSocket(t zmq4.Type, port int) (sck *zmq4.Socket, err error) {
 	return
 }
 
-func request(t string, m string) (r string, err error) {
+func request(t string, m string) (r string, connErr error, err error) {
 	sck, err := newSocket(zmq4.REQ, 5555)
 	defer sck.Close()
 
 	sck.SetLinger(0)
 
-	if err != nil {
+	if connErr != nil {
 		return
 	}
 
-	if _, err = sck.Send(t+" "+m, 0); err != nil {
+	if _, connErr = sck.Send(t+" "+m, 0); connErr != nil {
 		return
 	}
 
 	poller := zmq4.NewPoller()
 	poller.Add(sck, zmq4.POLLIN)
 
-	sockets, err := poller.Poll(requestTimeout)
+	sockets, connErr := poller.Poll(requestTimeout)
 
-	if err != nil {
+	if connErr != nil {
 		return
 	}
 
 	if len(sockets) < 1 {
-		err = errors.New("Unable to connect with engine")
+		connErr = errors.New("Unable to connect with engine")
 		return
 	}
 
-	r, err = sck.Recv(0)
+	r, connErr = sck.Recv(0)
+
+	if connErr != nil {
+		return
+	}
+
+	if strings.Contains(r, "ERROR") {
+		parts := strings.Split(r, "|")
+
+		if len(parts) > 1 {
+			err = errors.New(parts[1])
+		} else {
+			err = errors.New("Unknown")
+		}
+
+		return
+	}
+
 	return
 }
 
@@ -85,6 +103,6 @@ func Subscribe(fn handler) error {
 }
 
 // Log for the given time
-func Log(t string) (string, error) {
+func Log(t string) (string, error, error) {
 	return request("LOG", t)
 }

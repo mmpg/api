@@ -3,7 +3,6 @@ package endpoints
 import (
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/mmpg/api/engine"
 )
@@ -17,22 +16,17 @@ func Log(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := engine.Log(t)
+	res, connErr, err := engine.Log(t)
 
-	if err != nil {
-		log.Println(err)
+	if connErr != nil {
+		log.Println(connErr)
 		w.WriteHeader(500)
 		return
 	}
 
-	if strings.Contains(res, "ERROR") {
-		parts := strings.Split(res, " ")
+	if err != nil {
 		w.WriteHeader(400)
-
-		if len(parts) > 1 {
-			w.Write([]byte(parts[1]))
-		}
-
+		w.Write([]byte(err.Error()))
 		return
 	}
 
