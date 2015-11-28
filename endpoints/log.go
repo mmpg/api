@@ -1,8 +1,11 @@
 package endpoints
 
 import (
+	"bytes"
+	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/mmpg/api/engine"
 )
@@ -30,5 +33,7 @@ func Log(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(res))
+	bytes := bytes.NewBufferString(res)
+	w.Header().Set("Content-Length", strconv.Itoa(bytes.Len()))
+	io.Copy(w, bytes)
 }
