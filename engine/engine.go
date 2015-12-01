@@ -106,3 +106,8 @@ func Subscribe(fn handler) error {
 func Log(t string) (string, error, error) {
 	return request("LOG", t)
 }
+
+// PlayerExists checks if a player exists in the engine
+func PlayerExists(e string) (string, error, error) {
+	return request("PLAYER_EXISTS", e)
+}
