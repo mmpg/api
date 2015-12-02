@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -36,6 +37,7 @@ func createToken(email string, remember bool) *jwt.Token {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	token.Claims["email"] = email
+	token.Claims["remember"] = remember
 
 	var duration time.Duration
 
@@ -50,8 +52,62 @@ func createToken(email string, remember bool) *jwt.Token {
 	return token
 }
 
-func renewToken(w http.ResponseWriter, r *http.Request) {
+func serveNewAuthToken(w http.ResponseWriter, email string, remember bool) {
+	res, connErr, _ := engine.PlayerExists(email)
 
+	if connErr != nil {
+		w.WriteHeader(500)
+		return
+	}
+
+	if res != "TRUE" {
+		w.WriteHeader(400)
+		return
+	}
+
+	token, err := createToken(email, remember).SignedString(key)
+
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(500)
+		return
+	}
+
+	w.Write([]byte(token))
+}
+
+func renewToken(w http.ResponseWriter, r *http.Request) {
+	tokenString := r.Header.Get("Authorization")
+
+	// Validate token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return key, nil
+	})
+
+	if err != nil || !token.Valid {
+		w.WriteHeader(400)
+		return
+	}
+
+	email, ok := token.Claims["email"].(string)
+
+	if !ok {
+		w.WriteHeader(400)
+		return
+	}
+
+	remember, ok := token.Claims["remember"].(bool)
+
+	if !ok {
+		w.WriteHeader(400)
+		return
+	}
+
+	serveNewAuthToken(w, email, remember)
 }
 
 func login(w http.ResponseWriter, r *http.Request, uv UserValidator) {
@@ -68,27 +124,7 @@ func login(w http.ResponseWriter, r *http.Request, uv UserValidator) {
 		return
 	}
 
-	res, connErr, _ := engine.PlayerExists(m.Email)
-
-	if connErr != nil {
-		w.WriteHeader(500)
-		return
-	}
-
-	if res != "TRUE" {
-		w.WriteHeader(400)
-		return
-	}
-
-	token, err := createToken(m.Email, m.Remember).SignedString(key)
-
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(500)
-		return
-	}
-
-	w.Write([]byte(token))
+	serveNewAuthToken(w, m.Email, m.Remember)
 }
 
 // Auth handles authentication

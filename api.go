@@ -21,7 +21,11 @@ func Run(uv endpoints.UserValidator) {
 	mux.HandleFunc("/log", endpoints.Log)
 	mux.HandleFunc("/auth", endpoints.Auth(uv))
 
-	handler := cors.Default().Handler(mux)
+	// TODO: Configure CORS origins properly
+	handler := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedHeaders: []string{"Accept", "Content-Type", "Authorization"},
+	}).Handler(mux)
 
 	log.Fatal(http.ListenAndServe(":8080", handler))
 }
