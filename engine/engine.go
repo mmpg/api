@@ -1,8 +1,10 @@
 package engine
 
 import (
+	"encoding/base64"
 	"errors"
 	"io"
+	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
@@ -123,6 +125,12 @@ func PlayerExists(email string) (string, error) {
 // DeployPlayer compiles, installs and restarts the given player for the given
 // email
 func DeployPlayer(email string, p io.Reader) (err error) {
-	_, err = request("DEPLOY_PLAYER", email)
+	c, err := ioutil.ReadAll(p)
+
+	if err != nil {
+		return
+	}
+
+	_, err = request("DEPLOY_PLAYER", email+" "+base64.StdEncoding.EncodeToString(c))
 	return
 }
