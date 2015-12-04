@@ -20,6 +20,7 @@ func Run(uv endpoints.UserValidator) {
 	mux.HandleFunc("/events", endpoints.Events)
 	mux.HandleFunc("/log", endpoints.Log)
 	mux.HandleFunc("/auth", endpoints.Auth(uv))
+	mux.HandleFunc("/player", endpoints.Player)
 
 	// TODO: Configure CORS origins properly
 	handler := cors.New(cors.Options{

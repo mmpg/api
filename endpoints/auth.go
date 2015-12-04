@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,10 +17,10 @@ import (
 // UserValidator tells whether a given email and password are valid
 type UserValidator func(string, string) bool
 
-type authMessage struct {
-	Email    string `json:email`
-	Password string `json:password`
-	Remember bool   `json:remember`
+// AuthToken represents the information contained in an authentication token
+type AuthToken struct {
+	Email    string
+	Remember bool
 }
 
 var key []byte
@@ -33,23 +34,94 @@ func init() {
 	}
 }
 
-func createToken(email string, remember bool) *jwt.Token {
-	token := jwt.New(jwt.SigningMethodHS256)
+// ValidateToken validates a request authorization token
+func ValidateToken(r *http.Request) (authToken *AuthToken, err error) {
+	tokenString := r.Header.Get("Authorization")
 
-	token.Claims["email"] = email
-	token.Claims["remember"] = remember
+	// Validate token
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
 
-	var duration time.Duration
+		return key, nil
+	})
 
-	if remember {
-		duration = 24 * time.Hour * 7
-	} else {
-		duration = time.Hour
+	if err != nil {
+		return
 	}
 
-	token.Claims["exp"] = time.Now().Add(duration).Unix()
+	if !token.Valid {
+		err = errors.New("Invalid token")
+		return
+	}
 
-	return token
+	email, ok := token.Claims["email"].(string)
+
+	if !ok {
+		err = errors.New("Invalid email")
+	}
+
+	remember, ok := token.Claims["remember"].(bool)
+
+	if !ok {
+		remember = false
+	}
+
+	authToken = &AuthToken{
+		Email:    email,
+		Remember: remember,
+	}
+
+	return
+}
+
+// Auth handles authentication
+func Auth(uv UserValidator) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			renewToken(w, r)
+		case "POST":
+			login(w, r, uv)
+		default:
+			w.WriteHeader(405)
+		}
+	}
+}
+
+type authMessage struct {
+	Email    string `json:email`
+	Password string `json:password`
+	Remember bool   `json:remember`
+}
+
+func login(w http.ResponseWriter, r *http.Request, uv UserValidator) {
+	decoder := json.NewDecoder(r.Body)
+	var m authMessage
+
+	if err := decoder.Decode(&m); err != nil {
+		w.WriteHeader(403)
+		return
+	}
+
+	if !uv(m.Email, m.Password) {
+		w.WriteHeader(403)
+		return
+	}
+
+	serveNewAuthToken(w, m.Email, m.Remember)
+}
+
+func renewToken(w http.ResponseWriter, r *http.Request) {
+	token, err := ValidateToken(r)
+
+	if err != nil {
+		w.WriteHeader(400)
+		return
+	}
+
+	serveNewAuthToken(w, token.Email, token.Remember)
 }
 
 func serveNewAuthToken(w http.ResponseWriter, email string, remember bool) {
@@ -76,67 +148,21 @@ func serveNewAuthToken(w http.ResponseWriter, email string, remember bool) {
 	w.Write([]byte(token))
 }
 
-func renewToken(w http.ResponseWriter, r *http.Request) {
-	tokenString := r.Header.Get("Authorization")
+func createToken(email string, remember bool) *jwt.Token {
+	token := jwt.New(jwt.SigningMethodHS256)
 
-	// Validate token
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
+	token.Claims["email"] = email
+	token.Claims["remember"] = remember
 
-		return key, nil
-	})
+	var duration time.Duration
 
-	if err != nil || !token.Valid {
-		w.WriteHeader(400)
-		return
+	if remember {
+		duration = 24 * time.Hour * 7
+	} else {
+		duration = time.Hour
 	}
 
-	email, ok := token.Claims["email"].(string)
+	token.Claims["exp"] = time.Now().Add(duration).Unix()
 
-	if !ok {
-		w.WriteHeader(400)
-		return
-	}
-
-	remember, ok := token.Claims["remember"].(bool)
-
-	if !ok {
-		w.WriteHeader(400)
-		return
-	}
-
-	serveNewAuthToken(w, email, remember)
-}
-
-func login(w http.ResponseWriter, r *http.Request, uv UserValidator) {
-	decoder := json.NewDecoder(r.Body)
-	var m authMessage
-
-	if err := decoder.Decode(&m); err != nil {
-		w.WriteHeader(403)
-		return
-	}
-
-	if !uv(m.Email, m.Password) {
-		w.WriteHeader(403)
-		return
-	}
-
-	serveNewAuthToken(w, m.Email, m.Remember)
-}
-
-// Auth handles authentication
-func Auth(uv UserValidator) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "GET":
-			renewToken(w, r)
-		case "POST":
-			login(w, r, uv)
-		default:
-			w.WriteHeader(405)
-		}
-	}
+	return token
 }
