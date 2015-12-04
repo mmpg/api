@@ -2,6 +2,7 @@ package engine
 
 import (
 	"errors"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +12,9 @@ import (
 
 var (
 	host = "127.0.0.1"
+	// ErrConnectionFailed represnts the error that happens when connection
+	// with the engine cannot be established
+	ErrConnectionFailed = errors.New("engine: connection failed")
 )
 
 const (
@@ -31,37 +35,41 @@ func newSocket(t zmq4.Type, port int) (sck *zmq4.Socket, err error) {
 	return
 }
 
-func request(t string, m string) (r string, connErr error, err error) {
+func request(t string, m string) (r string, err error) {
 	sck, err := newSocket(zmq4.REQ, 5555)
 	defer sck.Close()
 
 	sck.SetLinger(0)
 
-	if connErr != nil {
+	if err != nil {
+		err = ErrConnectionFailed
 		return
 	}
 
-	if _, connErr = sck.Send(t+" "+m, 0); connErr != nil {
+	if _, err = sck.Send(t+" "+m, 0); err != nil {
+		err = ErrConnectionFailed
 		return
 	}
 
 	poller := zmq4.NewPoller()
 	poller.Add(sck, zmq4.POLLIN)
 
-	sockets, connErr := poller.Poll(requestTimeout)
+	sockets, err := poller.Poll(requestTimeout)
 
-	if connErr != nil {
+	if err != nil {
+		err = ErrConnectionFailed
 		return
 	}
 
 	if len(sockets) < 1 {
-		connErr = errors.New("Unable to connect with engine")
+		err = ErrConnectionFailed
 		return
 	}
 
-	r, connErr = sck.Recv(0)
+	r, err = sck.Recv(0)
 
-	if connErr != nil {
+	if err != nil {
+		err = ErrConnectionFailed
 		return
 	}
 
@@ -103,11 +111,18 @@ func Subscribe(fn handler) error {
 }
 
 // Log for the given time
-func Log(t string) (string, error, error) {
+func Log(t string) (string, error) {
 	return request("LOG", t)
 }
 
 // PlayerExists checks if a player exists in the engine
-func PlayerExists(e string) (string, error, error) {
-	return request("PLAYER_EXISTS", e)
+func PlayerExists(email string) (string, error) {
+	return request("PLAYER_EXISTS", email)
+}
+
+// DeployPlayer compiles, installs and restarts the given player for the given
+// email
+func DeployPlayer(email string, p io.Reader) (err error) {
+	_, err = request("DEPLOY_PLAYER", email)
+	return
 }

@@ -11,6 +11,16 @@ import (
 	"github.com/mmpg/api/notifier"
 )
 
+type maxBytesHandler struct {
+	h http.Handler
+	n int64
+}
+
+func (h *maxBytesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, h.n)
+	h.h.ServeHTTP(w, r)
+}
+
 // Run the MMPG API server
 func Run(uv endpoints.UserValidator) {
 	go hub.Run()
@@ -23,10 +33,13 @@ func Run(uv endpoints.UserValidator) {
 	mux.HandleFunc("/player", endpoints.Player)
 
 	// TODO: Configure CORS origins properly
-	handler := cors.New(cors.Options{
+	h := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
 		AllowedHeaders: []string{"Accept", "Content-Type", "Authorization"},
 	}).Handler(mux)
 
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	log.Fatal(http.ListenAndServe(":8080", &maxBytesHandler{
+		h: h,
+		n: 1024 * 200,
+	}))
 }

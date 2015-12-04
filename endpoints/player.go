@@ -3,6 +3,8 @@ package endpoints
 import (
 	"log"
 	"net/http"
+
+	"github.com/mmpg/api/engine"
 )
 
 // Max player file size: 200 KB
@@ -15,7 +17,7 @@ func Player(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := ValidateToken(r)
+	token, err := ValidateToken(r)
 
 	if err != nil {
 		w.WriteHeader(401)
@@ -26,7 +28,7 @@ func Player(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err)
-		w.WriteHeader(400)
+		w.WriteHeader(413)
 		return
 	}
 
@@ -45,5 +47,16 @@ func Player(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte("OK!"))
+	// TODO: Ensure that content represents a C++ file
+	err = engine.DeployPlayer(token.Email, content)
+
+	if err == engine.ErrConnectionFailed {
+		w.WriteHeader(500)
+		return
+	}
+
+	if err != nil {
+		w.WriteHeader(400)
+		return
+	}
 }

@@ -125,9 +125,9 @@ func renewToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func serveNewAuthToken(w http.ResponseWriter, email string, remember bool) {
-	res, connErr, _ := engine.PlayerExists(email)
+	res, err := engine.PlayerExists(email)
 
-	if connErr != nil {
+	if err != nil {
 		w.WriteHeader(500)
 		return
 	}

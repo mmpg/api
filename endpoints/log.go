@@ -3,7 +3,6 @@ package endpoints
 import (
 	"bytes"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -19,10 +18,9 @@ func Log(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, connErr, err := engine.Log(t)
+	res, err := engine.Log(t)
 
-	if connErr != nil {
-		log.Println(connErr)
+	if err == engine.ErrConnectionFailed {
 		w.WriteHeader(500)
 		return
 	}
