@@ -20,7 +20,7 @@ var (
 )
 
 const (
-	requestTimeout = 2 * time.Second
+	requestTimeout = 5 * time.Second
 )
 
 type handler func(string)
