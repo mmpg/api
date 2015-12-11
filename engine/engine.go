@@ -14,9 +14,13 @@ import (
 
 var (
 	host = "127.0.0.1"
-	// ErrConnectionFailed represnts the error that happens when connection
+	// ErrConnectionFailed represents the error that happens when connection
 	// with the engine cannot be established
 	ErrConnectionFailed = errors.New("engine: connection failed")
+
+	// ErrInvalidBase64Encoding is thrown when the engine returns an invalid
+	// base64 encoding
+	ErrInvalidBase64Encoding = errors.New("engine: invalid base64 encoding")
 )
 
 const (
@@ -113,8 +117,20 @@ func Subscribe(fn handler) error {
 }
 
 // Log for the given time
-func Log(t string) (string, error) {
-	return request("LOG", t)
+func Log(t string) ([]byte, error) {
+	res, err := request("LOG", t)
+
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := base64.StdEncoding.DecodeString(res)
+
+	if err != nil {
+		return nil, ErrInvalidBase64Encoding
+	}
+
+	return d, nil
 }
 
 // PlayerExists checks if a player exists in the engine

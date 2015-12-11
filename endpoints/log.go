@@ -2,7 +2,6 @@ package endpoints
 
 import (
 	"bytes"
-	"encoding/base64"
 	"io"
 	"log"
 	"net/http"
@@ -24,7 +23,8 @@ func Log(w http.ResponseWriter, r *http.Request) {
 
 	res, err := engine.Log(t)
 
-	if err == engine.ErrConnectionFailed {
+	if err == engine.ErrConnectionFailed || err == engine.ErrInvalidBase64Encoding {
+		log.Println(err)
 		w.WriteHeader(500)
 		return
 	}
@@ -35,15 +35,7 @@ func Log(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d, err := base64.StdEncoding.DecodeString(res)
-
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(500)
-		return
-	}
-
-	b := bytes.NewBuffer(d)
+	b := bytes.NewBuffer(res)
 
 	w.Header().Set("Content-Encoding", "gzip")
 	w.Header().Set("Content-Length", strconv.Itoa(b.Len()))
