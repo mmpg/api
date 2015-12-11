@@ -2,9 +2,12 @@ package endpoints
 
 import (
 	"bytes"
+	"encoding/base64"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/mmpg/api/engine"
 )
@@ -12,8 +15,9 @@ import (
 // Log endpoint
 func Log(w http.ResponseWriter, r *http.Request) {
 	t := r.URL.Query().Get("time")
+	e := r.Header.Get("Accept-Encoding")
 
-	if t == "" {
+	if t == "" || !strings.Contains(e, "gzip") {
 		w.WriteHeader(400)
 		return
 	}
@@ -31,7 +35,17 @@ func Log(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bytes := bytes.NewBufferString(res)
-	w.Header().Set("Content-Length", strconv.Itoa(bytes.Len()))
-	io.Copy(w, bytes)
+	d, err := base64.StdEncoding.DecodeString(res)
+
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(500)
+		return
+	}
+
+	b := bytes.NewBuffer(d)
+
+	w.Header().Set("Content-Encoding", "gzip")
+	w.Header().Set("Content-Length", strconv.Itoa(b.Len()))
+	io.Copy(w, b)
 }
