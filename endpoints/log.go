@@ -3,7 +3,6 @@ package endpoints
 import (
 	"bytes"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -23,15 +22,7 @@ func Log(w http.ResponseWriter, r *http.Request) {
 
 	res, err := engine.Log(t)
 
-	if err == engine.ErrConnectionFailed || err == engine.ErrInvalidBase64Encoding {
-		log.Println(err)
-		w.WriteHeader(500)
-		return
-	}
-
-	if err != nil {
-		w.WriteHeader(400)
-		w.Write([]byte(err.Error()))
+	if handleError(w, err) {
 		return
 	}
 

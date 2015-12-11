@@ -127,8 +127,7 @@ func renewToken(w http.ResponseWriter, r *http.Request) {
 func serveNewAuthToken(w http.ResponseWriter, email string, remember bool) {
 	res, err := engine.PlayerExists(email)
 
-	if err != nil {
-		w.WriteHeader(500)
+	if handleError(w, err) {
 		return
 	}
 

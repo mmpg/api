@@ -50,13 +50,7 @@ func Player(w http.ResponseWriter, r *http.Request) {
 	// TODO: Ensure that content represents a C++ file
 	err = engine.DeployPlayer(token.Email, content)
 
-	if err == engine.ErrConnectionFailed {
-		w.WriteHeader(500)
-		return
-	}
-
-	if err != nil {
-		w.WriteHeader(400)
+	if handleError(w, err) {
 		return
 	}
 }

@@ -1,13 +1,13 @@
 package endpoints
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/mmpg/api/client"
 	"github.com/mmpg/api/hub"
 )
 
+// Events upgrades the http request to a subscription using websockets
 func Events(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", 405)
@@ -16,8 +16,7 @@ func Events(w http.ResponseWriter, r *http.Request) {
 
 	c, err := client.Upgrade(w, r)
 
-	if err != nil {
-		log.Println(err)
+	if handleError(w, err) {
 		return
 	}
 
