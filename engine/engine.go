@@ -150,3 +150,8 @@ func DeployPlayer(email string, p io.Reader) (err error) {
 	_, err = request("DEPLOY_PLAYER", email+" "+base64.StdEncoding.EncodeToString(c))
 	return
 }
+
+// World returns the structure of the current game world
+func World() (string, error) {
+	return request("WORLD", "")
+}
